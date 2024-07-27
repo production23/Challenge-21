@@ -1,79 +1,113 @@
-# Alphabet Soup Charity Funding Predictor
+
+# Alphabet Soup Charity Analysis
 
 ## Overview
-This project aims to build a deep learning model to predict the success of applicants funded by Alphabet Soup. By analyzing historical data of funded organizations, the goal is to identify key features that contribute to successful outcomes and use these features to train a binary classifier.
+
+The purpose of this analysis is to create a binary classification model that can predict if an Alphabet Soup-funded organization will be successful based on the features in the dataset. This model is built using deep learning techniques with TensorFlow and Keras.
 
 ## Data Preprocessing
-- **Target Variable**: `IS_SUCCESSFUL`
-- **Feature Variables**:
-  - `APPLICATION_TYPE`
-  - `AFFILIATION`
-  - `CLASSIFICATION`
-  - `USE_CASE`
-  - `ORGANIZATION`
-  - `STATUS`
-  - `INCOME_AMT`
-  - `SPECIAL_CONSIDERATIONS`
-  - `ASK_AMT`
-- **Removed Variables**: `EIN` and `NAME`
 
-## Model Compilation, Training, and Evaluation
-### Model Architecture
-- **Input Layer**: 43 input features (after one-hot encoding)
-- **First Hidden Layer**: 80 neurons, ReLU activation function
-- **Second Hidden Layer**: 30 neurons, ReLU activation function
-- **Output Layer**: 1 neuron, Sigmoid activation function
+1. **Data Source:** The dataset used is `charity_data.csv`, which contains various features of organizations funded by Alphabet Soup.
+2. **Target Variable:** `IS_SUCCESSFUL`
+3. **Feature Variables:** All columns except `EIN`, `NAME`, and `IS_SUCCESSFUL`
+4. **Dropped Columns:** `EIN`, `NAME`
 
-### Training the Model
-The model was trained using 100 epochs with a validation split of 20%.
+### Steps
 
-### Evaluating the Model
-The model was evaluated on a test dataset, achieving the following performance:
-- **Initial Model**:
-  - Loss: 0.59
-  - Accuracy: 72%
-- **Optimized Model**:
-  - Loss: 0.52
-  - Accuracy: 76%
-
-### Optimization Steps
-1. Combined rare categorical variables into a new category "Other".
-2. Increased neurons in the first hidden layer to 100.
-3. Added a third hidden layer with 20 neurons.
-4. Tried different activation functions (e.g., Tanh, LeakyReLU) for hidden layers.
-5. Increased the number of epochs to 150 for training.
-
-## Results
-The final model achieved an accuracy of 76% and a loss of 0.52 on the test dataset after optimization. These results indicate that the model is reasonably effective at predicting the success of funded organizations.
-
-## Recommendations
-For potentially higher accuracy, alternative models such as Random Forest or Gradient Boosting could be explored. These models can handle non-linear relationships and interactions between features more effectively.
-
-## How to Run the Project
-1. **Clone the Repository**:
-   ```bash
-   git clone <repository-url>
-   cd <repository-directory>
-   ```
-
-2. **Install Dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-3. **Run the Jupyter Notebook**:
-   ```bash
-   jupyter notebook Starter_Code.ipynb
-   ```
-
-4. **Train and Evaluate the Model**:
-   Follow the steps in the Jupyter Notebook to preprocess the data, compile, train, and evaluate the model.
-
-5. **Save the Model**:
-   The model will be saved as `AlphabetSoupCharity.h5` in the working directory.
-
-6. **Download the Saved Model**:
+1. **Load and Inspect Data:**
    ```python
-   from google.colab import files
-   files.download("AlphabetSoupCharity.h5")
+   import pandas as pd
+   application_df = pd.read_csv("https://static.bc-edx.com/data/dl-1-2/m21/lms/starter/charity_data.csv")
+   application_df.head()
    ```
+
+2. **Drop Non-beneficial Columns:**
+   ```python
+   application_df = application_df.drop(columns=['EIN', 'NAME'])
+   ```
+
+3. **Determine Unique Values:**
+   ```python
+   unique_counts = application_df.nunique()
+   print(unique_counts)
+   ```
+
+4. **Replace Rare Categories in `APPLICATION_TYPE`:**
+   ```python
+   application_type_counts = application_df['APPLICATION_TYPE'].value_counts()
+   replace_application_types = application_type_counts[application_type_counts < 100].index
+   application_df['APPLICATION_TYPE'] = application_df['APPLICATION_TYPE'].replace(replace_application_types, 'Other')
+   ```
+
+5. **Replace Rare Categories in `CLASSIFICATION`:**
+   ```python
+   classification_counts = application_df['CLASSIFICATION'].value_counts()
+   classifications_to_replace = classification_counts[classification_counts < 100].index.tolist()
+   application_df['CLASSIFICATION'] = application_df['CLASSIFICATION'].replace(classifications_to_replace, 'Other')
+   ```
+
+6. **Convert Categorical Data to Numeric:**
+   ```python
+   application_df = pd.get_dummies(application_df)
+   ```
+
+7. **Split Data into Features and Target:**
+   ```python
+   X = application_df.drop(columns=['IS_SUCCESSFUL'])
+   y = application_df['IS_SUCCESSFUL']
+   ```
+
+8. **Split Data into Training and Testing Sets:**
+   ```python
+   from sklearn.model_selection import train_test_split
+   X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+   ```
+
+9. **Scale the Data:**
+   ```python
+   from sklearn.preprocessing import StandardScaler
+   scaler = StandardScaler()
+   X_train_scaled = scaler.fit_transform(X_train)
+   X_test_scaled = scaler.transform(X_test)
+   ```
+
+## Model Building
+
+1. **Define the Model:**
+   ```python
+   import tensorflow as tf
+   nn = tf.keras.models.Sequential()
+   nn.add(tf.keras.layers.Dense(units=80, activation='relu', input_dim=X_train_scaled.shape[1]))
+   nn.add(tf.keras.layers.Dense(units=30, activation='relu'))
+   nn.add(tf.keras.layers.Dense(units=1, activation='sigmoid'))
+   nn.summary()
+   ```
+
+2. **Compile the Model:**
+   ```python
+   nn.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+   ```
+
+3. **Train the Model:**
+   ```python
+   history = nn.fit(X_train_scaled, y_train, epochs=100, validation_split=0.2)
+   ```
+
+## Model Evaluation
+
+1. **Evaluate the Model:**
+   ```python
+   loss, accuracy = nn.evaluate(X_test_scaled, y_test)
+   print(f'Model Loss: {loss}, Model Accuracy: {accuracy}')
+   ```
+
+## Export the Model
+
+1. **Save the Model:**
+   ```python
+   nn.save('AlphabetSoupCharity.h5')
+   ```
+
+## Summary
+
+The model was successfully built and trained to predict the success of Alphabet Soup-funded organizations. Further optimization and tuning can be done to improve the model's performance.
